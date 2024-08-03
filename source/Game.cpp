@@ -5,12 +5,15 @@ Game::Game() : m_window(nullptr), m_renderer(nullptr), m_running(false),
                m_windowWidth(1000), 
                m_windowHeight(1000), 
                m_gameAreaWidth(m_windowWidth - UI_AREA_WIDTH),
-               m_player1(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, m_windowHeight - 100, RECT_WIDTH, RECT_HEIGHT),
-               m_player2(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, 100, RECT_WIDTH, RECT_HEIGHT) {}
+               m_player1(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, m_windowHeight - 200, RECT_WIDTH, RECT_HEIGHT),
+               m_player2(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, 100, RECT_WIDTH, RECT_HEIGHT),
+               m_ball(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, (m_windowHeight / 2), 10, 5, 5),
+               m_dT(0.0f), m_lT(0)
+            {}
 
 Game::~Game() {
-    SDL_DestroyRenderer(m_renderer);
-    SDL_DestroyWindow(m_window);
+    if(m_renderer) SDL_DestroyRenderer(m_renderer);
+    if(m_window) SDL_DestroyWindow(m_window);
     SDL_Quit();
 }
 
@@ -34,6 +37,7 @@ bool Game::initialize() {
     }
 
     m_running = true;
+    m_lT = SDL_GetTicks();
     return true;
 }
 
@@ -42,7 +46,12 @@ void Game::run() {
         handleEvents();
         update();
         render();
-        SDL_Delay(16); // Approximately 60 frames per second
+
+       // Uint32 currentTime = SDL_GetTicks();
+       // m_dT = (currentTime - m_lT) / 1000.0f;
+        //m_lT = currentTime;
+
+        SDL_Delay(16);
     }
 }
 
@@ -57,31 +66,24 @@ void Game::handleEvents() {
             m_gameAreaWidth = m_windowWidth - UI_AREA_WIDTH;
         }
         m_player1.handleEvent(event);
+        m_player2.handleEvent(event);
     }
 }
 
-/**
- * @brief Updates the game state.
- *
- * This function is responsible for updating the game state by calling the update method of the player objects.
- * The update method for each player is responsible for handling player movement and any other game-related logic.
- *
- * @return void
- */
 void Game::update() {
+    int score = 0;
     m_player1.update(m_gameAreaWidth, UI_AREA_WIDTH);
     m_player2.update(m_gameAreaWidth, UI_AREA_WIDTH);
+    m_ball.update(m_gameAreaWidth, score);
+    m_ball.collisionDetection(m_player1.getRect(), m_player2.getRect());
+
+    //m_modManager.updateModifiers(m_dT);
+    //m_modManager.checkCollisions(m_player1);
+    //m_modManager.checkCollisions(m_player2);
+
 }
 
-
-/**
- * @brief Renders the game to the screen.
- *
- * This function is responsible for drawing the game to the screen. It clears the screen, draws the game area,
- * player objects, and the left UI area, and then presents the rendered image to the screen.
- *
- * @return void
- */void Game::render() {
+void Game::render() {
     SDL_SetRenderDrawColor(m_renderer, 25, 25, 25, 255);
     SDL_RenderClear(m_renderer);
 
@@ -91,6 +93,8 @@ void Game::update() {
 
     m_player1.render(m_renderer);
     m_player2.render(m_renderer);
+    m_ball.render(m_renderer);
+    //m_modManager.render(m_renderer);
 
     SDL_Rect leftUIArea = {0, 0, UI_AREA_WIDTH, m_windowHeight};
     SDL_SetRenderDrawColor(m_renderer, 15, 15, 15, 255);
