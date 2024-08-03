@@ -22,7 +22,16 @@ void Player::update(int gameAreaWidth, int uiAreaWidth) {
     }
 }
 
-void Player::render(SDL_Renderer* renderer) const {
+void Player::render(SDL_Renderer* renderer) {
     SDL_SetRenderDrawColor(renderer, 100, 100, 100, 255);
     SDL_RenderFillRect(renderer, &m_rect);
 }
+
+void Player::setSize(float size){
+
+}
+
+void Player::setSpeed(float speed){
+
+}
+

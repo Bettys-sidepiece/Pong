@@ -4,9 +4,6 @@
 Game::Game() : m_window(nullptr), m_renderer(nullptr), m_running(false),
                m_windowWidth(1000), 
                m_windowHeight(1000), 
-               UI_AREA_WIDTH(400),
-               RECT_WIDTH(100),
-               RECT_HEIGHT(20),
                m_gameAreaWidth(m_windowWidth - UI_AREA_WIDTH),
                m_player1(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, m_windowHeight - 100, RECT_WIDTH, RECT_HEIGHT),
                m_player2(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, 100, RECT_WIDTH, RECT_HEIGHT) {}
@@ -63,12 +60,28 @@ void Game::handleEvents() {
     }
 }
 
+/**
+ * @brief Updates the game state.
+ *
+ * This function is responsible for updating the game state by calling the update method of the player objects.
+ * The update method for each player is responsible for handling player movement and any other game-related logic.
+ *
+ * @return void
+ */
 void Game::update() {
     m_player1.update(m_gameAreaWidth, UI_AREA_WIDTH);
     m_player2.update(m_gameAreaWidth, UI_AREA_WIDTH);
 }
 
-void Game::render() {
+
+/**
+ * @brief Renders the game to the screen.
+ *
+ * This function is responsible for drawing the game to the screen. It clears the screen, draws the game area,
+ * player objects, and the left UI area, and then presents the rendered image to the screen.
+ *
+ * @return void
+ */void Game::render() {
     SDL_SetRenderDrawColor(m_renderer, 25, 25, 25, 255);
     SDL_RenderClear(m_renderer);
 

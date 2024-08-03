@@ -11,7 +11,7 @@ int windowHeight = 1000;
 int gameAreaWidth = windowWidth - UI_AREA_WIDTH;
 int p_rect_x = UI_AREA_WIDTH + (gameAreaWidth - RECT_WIDTH) / 2;// Initial x position of the rectangle 1
 int p_rect_y = UI_AREA_WIDTH + (windowWidth - 100);
-int s_rect_x = (gameAreaWidth - RECT_WIDTH) / 2;
+int s_rect_x = UI_AREA_WIDTH + (gameAreaWidth - RECT_WIDTH) / 2;
 int s_rect_y = 100;
 
 
@@ -146,9 +146,6 @@ void runGameLoop(SDL_Event& evnt, SDL_Renderer* render, bool &running)
         SDL_Rect leftUIArea = {0,0, UI_AREA_WIDTH, windowHeight};
         SDL_SetRenderDrawColor(render, 15, 15, 15, 255); // Light gray
         SDL_RenderFillRect(render, &leftUIArea);
-
-        //SDL_Rect rightUIArea = {UI_AREA_WIDTH + GAME_AREA_WIDTH, 0, UI_AREA_WIDTH, WINDOW_HEIGHT};
-        //SDL_RenderFillRect(render, &rightUIArea);
 
         // Present the renderer
         SDL_RenderPresent(render);
