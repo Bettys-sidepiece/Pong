@@ -5,24 +5,39 @@ Game::Game() : m_window(nullptr), m_renderer(nullptr), m_running(false),
                m_windowWidth(1000), 
                m_windowHeight(1000), 
                m_gameAreaWidth(m_windowWidth - UI_AREA_WIDTH),
-               m_player1(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, m_windowHeight - 200, RECT_WIDTH, RECT_HEIGHT, 1),
-               m_player2(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, 100, RECT_WIDTH, RECT_HEIGHT, -1),
+               m_player1(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, m_windowHeight - 225, RECT_WIDTH, RECT_HEIGHT, 1),
+               m_player2(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, 50, RECT_WIDTH, RECT_HEIGHT, -1),
                m_ball(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, (m_windowHeight - 200)-10, 10),//<<< changed speed from 5 to 0
                m_ballAttachedToPlayer1(true), m_ballAttachedToPlayer2(false),
-               m_dT(0.0f), m_lT(0)
+               m_dT(0.0f), m_lT(0),
+               m_gui(nullptr, 0, 0, nullptr)
+
             {
                 m_ball.attachTo(&m_player1.p_getRect(),m_player1.m_id);
+                m_gamestate = 0;
             }
 
 Game::~Game() {
     if(m_renderer) SDL_DestroyRenderer(m_renderer);
     if(m_window) SDL_DestroyWindow(m_window);
+    if (m_font) {
+        TTF_CloseFont(m_font);
+    }
+    if(m_gui.getTitleFont()){
+        TTF_CloseFont(m_gui.getTitleFont());
+    }
+    TTF_Quit();
     SDL_Quit();
 }
 
 bool Game::initialize() {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
         std::cout << "Error: SDL Initialization " << SDL_GetError() << "\n";
+        return false;
+    }
+
+    if (TTF_Init() != 0) {
+        std::cout << "Error: SDL_ttf Initialization " << TTF_GetError() << "\n";
         return false;
     }
 
@@ -39,6 +54,20 @@ bool Game::initialize() {
         return false;
     }
 
+    m_font = TTF_OpenFont("Roboto/Roboto-Medium.ttf", 25); // Load a font
+    if (!m_font) {
+        std::cout << "Error: SDL_ttf Font Loading " << TTF_GetError() << "\n";
+        return false;
+    }
+
+    TTF_Font* titlefont = TTF_OpenFont("Roboto/Roboto-Bold.ttf", 60); // Load a font
+    if (!titlefont) {
+        std::cout << "Error: SDL_ttf Font Loading " << TTF_GetError() << "\n";
+    }
+    
+    m_gui = UI(m_renderer, UI_AREA_WIDTH, m_windowHeight, m_font); // Initialize UI
+    m_gui.setTitleFont(titlefont);
+    
     m_running = true;
     m_lT = SDL_GetTicks();
     return true;
@@ -50,9 +79,7 @@ void Game::run() {
         update();
         render();
 
-       // Uint32 currentTime = SDL_GetTicks();
-       // m_dT = (currentTime - m_lT) / 1000.0f;
-        //m_lT = currentTime;
+    
         SDL_Delay(16);
     }
 }
@@ -76,6 +103,7 @@ void Game::handleEvents() {
 
         m_player1.handleEvent(event);
         m_player2.handleEvent(event);
+        m_gui.handleEvent(event);
     }
 }
 
@@ -103,10 +131,7 @@ void Game::update() {
         m_ball.attachTo(&m_player1.p_getRect(),m_player1.m_id);
         m_ballAttachedToPlayer1 = true;
     }
-    //m_modManager.updateModifiers(m_dT);
-    //m_modManager.checkCollisions(m_player1);
-    //m_modManager.checkCollisions(m_player2);
-
+    m_gui.update();
 }
 
 void Game::render() {
@@ -120,11 +145,9 @@ void Game::render() {
     m_player1.render(m_renderer);
     m_player2.render(m_renderer);
     m_ball.render(m_renderer);
-    //m_modManager.render(m_renderer);
 
-    SDL_Rect leftUIArea = {0, 0, UI_AREA_WIDTH, m_windowHeight};
-    SDL_SetRenderDrawColor(m_renderer, 15, 15, 15, 255);
-    SDL_RenderFillRect(m_renderer, &leftUIArea);
+    //m_modManager.render(m_renderer);
+    m_gui.render(m_gamestate);
 
     SDL_RenderPresent(m_renderer);
 }

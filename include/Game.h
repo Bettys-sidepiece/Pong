@@ -2,9 +2,11 @@
 #define GAME_H
 
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
 #include "Player.h"
 #include "GameModifiers.h"
 #include "Ball.h"
+#include "PongUI.h"
 
 class Game {
 public:
@@ -19,8 +21,11 @@ private:
     void update();
     void render();
 
+    
     SDL_Window* m_window;
     SDL_Renderer* m_renderer;
+    TTF_Font* m_font;
+
     bool m_running;
     int m_windowWidth;
     int m_windowHeight;
@@ -34,10 +39,14 @@ private:
     Ball m_ball;
     bool m_ballAttachedToPlayer1;
     bool m_ballAttachedToPlayer2;
+
+    UI m_gui;
     
     GameModifierManager m_modManager;
     float m_dT;
     Uint32 m_lT;
+
+    int m_gamestate;
 
 
 };

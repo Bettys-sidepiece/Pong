@@ -101,3 +101,4 @@ void Ball::drawCircle(SDL_Renderer* renderer, int centerX, int centerY, int radi
         }
     }
 }
+
