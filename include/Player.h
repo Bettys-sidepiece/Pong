@@ -8,7 +8,9 @@ public:
 
     int m_score;
 
-    Player(int x, int y, int width, int height);
+    const int m_id;
+
+    Player(int x, int y, int width, int height, int id);
     void handleEvent(const SDL_Event& event);
     void update(int gameAreaWidth, int uiAreaWidth);
     void render(SDL_Renderer* renderer) const;
@@ -17,7 +19,10 @@ public:
     void setSize(float size);  
     float getSize() const {return m_size;};
     SDL_Rect getRect() const {return m_rect;};
-    int getVelocityX() const { return m_velocityX; } // New method to get horizontal velocity
+
+    SDL_Rect& p_getRect() {return m_rect;};
+    
+    int getVelocityX() const { return m_velocityX; }
 
 
 
@@ -26,6 +31,7 @@ private:
     int m_velocityX;
     int m_speed;
     float m_size;
+    int m_playerId;
 };
 
 #endif // PLAYER_H

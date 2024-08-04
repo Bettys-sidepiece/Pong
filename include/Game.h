@@ -8,6 +8,7 @@
 
 class Game {
 public:
+
     Game();
     ~Game();
     bool initialize();
@@ -31,9 +32,14 @@ private:
     Player m_player1;
     Player m_player2;
     Ball m_ball;
+    bool m_ballAttachedToPlayer1;
+    bool m_ballAttachedToPlayer2;
+    
     GameModifierManager m_modManager;
     float m_dT;
     Uint32 m_lT;
+
+
 };
 
 #endif // GAME_H

@@ -1,8 +1,8 @@
 #include "Player.h"
 #include <algorithm>
 
-Player::Player(int x, int y, int width, int height)
-    : m_rect{x, y, width, height}, m_speed(10) {}
+Player::Player(int x, int y, int width, int height, int id)
+    : m_rect{x, y, width, height}, m_speed(10), m_score(0), m_id(id) {}
 
 void Player::handleEvent(const SDL_Event& event) {
     if (event.type == SDL_KEYDOWN) {

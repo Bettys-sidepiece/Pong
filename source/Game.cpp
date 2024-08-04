@@ -5,11 +5,14 @@ Game::Game() : m_window(nullptr), m_renderer(nullptr), m_running(false),
                m_windowWidth(1000), 
                m_windowHeight(1000), 
                m_gameAreaWidth(m_windowWidth - UI_AREA_WIDTH),
-               m_player1(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, m_windowHeight - 200, RECT_WIDTH, RECT_HEIGHT),
-               m_player2(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, 100, RECT_WIDTH, RECT_HEIGHT),
-               m_ball(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, (m_windowHeight / 2), 10, 5, 5),
+               m_player1(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, m_windowHeight - 200, RECT_WIDTH, RECT_HEIGHT, 1),
+               m_player2(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, 100, RECT_WIDTH, RECT_HEIGHT, -1),
+               m_ball(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, (m_windowHeight - 200)-10, 10),//<<< changed speed from 5 to 0
+               m_ballAttachedToPlayer1(true), m_ballAttachedToPlayer2(false),
                m_dT(0.0f), m_lT(0)
-            {}
+            {
+                m_ball.attachTo(&m_player1.p_getRect(),m_player1.m_id);
+            }
 
 Game::~Game() {
     if(m_renderer) SDL_DestroyRenderer(m_renderer);
@@ -50,7 +53,6 @@ void Game::run() {
        // Uint32 currentTime = SDL_GetTicks();
        // m_dT = (currentTime - m_lT) / 1000.0f;
         //m_lT = currentTime;
-
         SDL_Delay(16);
     }
 }
@@ -64,7 +66,14 @@ void Game::handleEvents() {
             m_windowWidth = event.window.data1;
             m_windowHeight = event.window.data2;
             m_gameAreaWidth = m_windowWidth - UI_AREA_WIDTH;
+        } else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE) {
+            if (m_ballAttachedToPlayer1 || m_ballAttachedToPlayer2) {
+                m_ball.launch();
+                m_ballAttachedToPlayer1 = false;
+                m_ballAttachedToPlayer2 = false;
+            }
         }
+
         m_player1.handleEvent(event);
         m_player2.handleEvent(event);
     }
@@ -74,9 +83,26 @@ void Game::update() {
     int score = 0;
     m_player1.update(m_gameAreaWidth, UI_AREA_WIDTH);
     m_player2.update(m_gameAreaWidth, UI_AREA_WIDTH);
-    m_ball.update(m_gameAreaWidth, score);
-    m_ball.collisionDetection(m_player1.getRect(), m_player2.getRect());
 
+    if(m_ballAttachedToPlayer1){
+        m_ball.attachTo(&m_player1.p_getRect(), m_player1.m_id);
+        m_ball.update(m_gameAreaWidth, UI_AREA_WIDTH,score);
+    }else if(m_ballAttachedToPlayer2){
+        m_ball.attachTo(&m_player2.p_getRect(),m_player2.m_id);
+        m_ball.update(m_gameAreaWidth, UI_AREA_WIDTH,score);
+    }else{
+        m_ball.update(m_gameAreaWidth, UI_AREA_WIDTH,score);
+        m_ball.collisionDetection(m_player1.getRect(), m_player2.getRect());
+    }
+    if(score > 0){
+        m_player1.m_score++;
+        m_ball.attachTo(&m_player2.p_getRect(),m_player2.m_id);
+        m_ballAttachedToPlayer2 = true;
+    }else if(score < 0){
+        m_player2.m_score++;
+        m_ball.attachTo(&m_player1.p_getRect(),m_player1.m_id);
+        m_ballAttachedToPlayer1 = true;
+    }
     //m_modManager.updateModifiers(m_dT);
     //m_modManager.checkCollisions(m_player1);
     //m_modManager.checkCollisions(m_player2);
