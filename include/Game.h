@@ -8,20 +8,58 @@
 #include "Ball.h"
 #include "PongUI.h"
 
+enum GameState{
+        MENU = 0,
+        SETTINGS,
+        PAUSED,
+        RUNNING,
+        GAMESEL
+    };
+
+enum class GameMode{
+    NONE,
+    SINGLE_PLAYER = 1,
+    MULTI_PLAYER,
+};
+
 class Game {
 public:
+    static Game* g_game;
 
     Game();
     ~Game();
     bool initialize();
     void run();
+    void startGame();
+    void pauseGame();
+    void resumeGame();
+    void gameSettings();
+    void playMode();
+    void setMusic();
+    void setDifficulty();
+    void backToMenu();
+    void toggleSinglePlayer();
+    void toggleMultiPlayer();
+
+    static void exitCallback();
+    static void startGameCallback();
+    static void pauseGameCallback();
+    static void resumeCallback();
+    static void gameSettingsCallback();
+    static void playModeCallback();
+    // Function prototypes for additional callbacks
+    static void toggleMusic();
+    static void changeDifficulty();
+    static void returnToMenu();
+    static void selectSinglePlayer();
+    static void selectMultiplayer();
 
 private:
+    
     void handleEvents();
     void update();
     void render();
 
-    
     SDL_Window* m_window;
     SDL_Renderer* m_renderer;
     TTF_Font* m_font;
@@ -46,9 +84,11 @@ private:
     float m_dT;
     Uint32 m_lT;
 
-    int m_gamestate;
-
+    GameState e_gamestate;
+    GameMode e_gamemode;
 
 };
+
+extern Game* g_game;
 
 #endif // GAME_H
