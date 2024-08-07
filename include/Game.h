@@ -7,6 +7,7 @@
 #include "GameModifiers.h"
 #include "Ball.h"
 #include "PongUI.h"
+#include "ComputerAI.h"
 
 enum GameState{
         MENU = 0,
@@ -53,6 +54,7 @@ public:
     static void returnToMenu();
     static void selectSinglePlayer();
     static void selectMultiplayer();
+    void setAIDifficulty(Difficulty difficulty);
 
 private:
     
@@ -86,6 +88,8 @@ private:
 
     GameState e_gamestate;
     GameMode e_gamemode;
+
+    ComputerAI m_AI;
 
 };
 

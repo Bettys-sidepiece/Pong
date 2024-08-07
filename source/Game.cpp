@@ -11,11 +11,12 @@ Game::Game()
       m_player2(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, 50, RECT_WIDTH, RECT_HEIGHT, -1),
       m_ball(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, (m_windowHeight - 200)-10, 10),
       m_ballAttachedToPlayer1(true), m_ballAttachedToPlayer2(false),
-      m_dT(0.0f), m_lT(0), m_gui(nullptr, 0, 0, nullptr)
+      m_dT(0.0f), m_lT(0), m_gui(nullptr, 0, 0, nullptr),
+      m_AI(Difficulty::NORMAL)
 {
     m_ball.attachTo(&m_player1.p_getRect(), m_player1.m_id);
     e_gamestate = GameState::MENU;
-    e_gamemode = GameMode::NONE;
+    e_gamemode = GameMode::SINGLE_PLAYER;
     g_game = this;
 }
 
@@ -54,7 +55,7 @@ void Game::resumeGame() {
 }
 
 void Game::gameSettings() {
-    if (e_gamemode == GameMode::NONE) {
+    if (e_gamestate == GameState::MENU || e_gamestate == GameState::PAUSED) {
         e_gamestate = GameState::SETTINGS;
         m_gui.setGameState(static_cast<int>(e_gamestate));
     }
@@ -75,12 +76,11 @@ void Game::setDifficulty(){
 }
 
 void Game::backToMenu(){
-    if(e_gamestate == GameState::SETTINGS || 
-        e_gamestate == GameState::GAMESEL || 
-        e_gamestate == GameState::RUNNING) 
+    if(e_gamestate == GameState::SETTINGS || e_gamestate == GameState::GAMESEL || 
+        e_gamestate == GameState::PAUSED) 
         {
-        e_gamestate = GameState::MENU;
-        m_gui.setGameState(static_cast<int>(e_gamestate));
+            e_gamestate = GameState::MENU;
+            m_gui.setGameState(static_cast<int>(e_gamestate));
         }
 }
 
@@ -115,6 +115,17 @@ bool Game::initialize() {
         std::cout << "Error: SDL_ttf Initialization " << TTF_GetError() << "\n";
         return false;
     }
+    
+    // Get the primary display
+    SDL_DisplayMode DM;
+    if (SDL_GetCurrentDisplayMode(0, &DM) != 0) {
+        std::cout << "Error: SDL_GetCurrentDisplayMode " << SDL_GetError() << "\n";
+        return false;
+    }
+    // Set the window size to the display size
+    m_windowWidth = DM.w;
+    m_windowHeight = DM.h;
+    m_gameAreaWidth = m_windowWidth - UI_AREA_WIDTH;
 
     m_window = SDL_CreateWindow("PONG", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                 m_windowWidth, m_windowHeight, SDL_WINDOW_RESIZABLE);
@@ -129,7 +140,7 @@ bool Game::initialize() {
         return false;
     }
 
-    m_font = TTF_OpenFont("Assets/PixelCaps.ttf", 35);
+    m_font = TTF_OpenFont("Assets/PixelCaps.ttf", 25);
     if (!m_font) {
         std::cout << "Error: SDL_ttf Font Loading " << TTF_GetError() << "\n";
         return false;
@@ -150,6 +161,9 @@ bool Game::initialize() {
     m_gui.setSubTitleFont(subtitlefont);
     m_gui.setGameState(e_gamestate);
 
+    m_gui.setScreenWidth(m_gameAreaWidth);
+    m_gui.setScreenHeight(m_windowHeight);
+
     m_running = true;
     m_gui.initButtons(exitCallback, startGameCallback, pauseGameCallback, 
                       resumeCallback, gameSettingsCallback, playModeCallback,
@@ -160,7 +174,12 @@ bool Game::initialize() {
 }
 
 void Game::run() {
+    Uint32 lastTime = SDL_GetTicks();
     while (m_running) {
+        Uint32 currentTime = SDL_GetTicks();
+        m_dT = (currentTime - lastTime) / 1000.0f; // Convert to seconds
+        lastTime = currentTime;
+
         handleEvents();
         update();
         render();
@@ -178,7 +197,7 @@ void Game::handleEvents() {
             m_windowHeight = event.window.data2;
             m_gameAreaWidth = m_windowWidth - UI_AREA_WIDTH;
         } else if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_SPACE) {
-            if (m_ballAttachedToPlayer1 || m_ballAttachedToPlayer2) {
+            if (m_ballAttachedToPlayer1) {
                 m_ball.launch();
                 m_ballAttachedToPlayer1 = false;
                 m_ballAttachedToPlayer2 = false;
@@ -187,7 +206,11 @@ void Game::handleEvents() {
 
         if (e_gamestate == GameState::RUNNING) {
             m_player1.handleEvent(event);
-            m_player2.handleEvent(event);
+            if (m_ballAttachedToPlayer2) {
+                m_ball.launch();
+                m_ballAttachedToPlayer1 = false;
+                m_ballAttachedToPlayer2 = false;
+            }
         }
 
         m_gui.handleEvent(event);
@@ -202,6 +225,9 @@ void Game::update() {
             // Update menu
             break;
         case GameState::RUNNING:
+            if (e_gamemode == GameMode::SINGLE_PLAYER) {
+                m_AI.update(m_ball, m_player2, m_dT, m_gameAreaWidth, UI_AREA_WIDTH);
+            }   
             m_player1.update(m_gameAreaWidth, UI_AREA_WIDTH);
             m_player2.update(m_gameAreaWidth, UI_AREA_WIDTH);
 
@@ -225,6 +251,9 @@ void Game::update() {
                 m_ball.attachTo(&m_player1.p_getRect(), m_player1.m_id);
                 m_ballAttachedToPlayer1 = true;
             }
+
+            m_gui.updateScore(m_player1.m_score, m_player2.m_score);
+
             break;
 
         case GameState::PAUSED:
@@ -248,11 +277,47 @@ void Game::render() {
     SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 255);
     SDL_RenderFillRect(m_renderer, &gameArea);
 
+    SDL_Rect pauseArea = {UI_AREA_WIDTH,0,m_gameAreaWidth,m_windowHeight};
+    SDL_Rect leftGuard = {(395), 0, 10, m_windowHeight};
+    SDL_Rect rightGuard = {(m_windowWidth-5), 0, 25, m_windowHeight};
+    SDL_Rect centerLine = {(UI_AREA_WIDTH+5),(m_windowHeight/2), (m_gameAreaWidth-10),25};
+
+    SDL_Rect outline_sp = {380,320,10,10};
+    SDL_Rect outline_mp = {380,380,10,10};
+
+    m_gui.render(static_cast<int>(e_gamestate));
+
     switch (e_gamestate) {
         case GameState::MENU:
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer,200,200,200,150);
+            SDL_RenderFillRect(m_renderer, &leftGuard);
+            
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer, 200,200,200,150);
+            SDL_RenderFillRect(m_renderer, &rightGuard);
+            
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer, 200,200,200,150);
+            SDL_RenderFillRect(m_renderer, &centerLine);
+
+            m_player1.render(m_renderer);
+            m_player2.render(m_renderer);
             // Render menu
             break;
         case GameState::RUNNING:
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer,200,200,200,175);
+            SDL_RenderFillRect(m_renderer, &leftGuard);
+            
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer, 200,200,200,175);
+            SDL_RenderFillRect(m_renderer, &rightGuard);
+
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer, 200,200,200,175);
+            SDL_RenderFillRect(m_renderer, &centerLine);
+
             m_player1.render(m_renderer);
             m_player2.render(m_renderer);
             m_ball.render(m_renderer);
@@ -260,16 +325,52 @@ void Game::render() {
 
         case GameState::PAUSED:
             // Render paused game and pause menu
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer,200,200,200,175);
+            SDL_RenderFillRect(m_renderer, &leftGuard);
+            
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer, 200,200,200,175);
+            SDL_RenderFillRect(m_renderer, &rightGuard);
+
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer, 200,200,200,175);
+            SDL_RenderFillRect(m_renderer, &centerLine);
+
+            m_player1.render(m_renderer);
+            m_player2.render(m_renderer);
+            m_ball.render(m_renderer);
+
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer, 125, 125, 125, 50);
+            SDL_RenderFillRect(m_renderer, &pauseArea);
             break;
         case GameState::SETTINGS:
             // Render settings menu
+            
+
             break;
         case GameState::GAMESEL:
             // Render game selection menu
+            SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
+            SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
+
+            if(e_gamemode == GameMode::MULTI_PLAYER){
+                SDL_RenderFillRect(m_renderer, &outline_mp);
+                SDL_RenderDrawRect(m_renderer, &outline_sp);
+            }
+            else{
+                SDL_RenderFillRect(m_renderer, &outline_sp);
+                SDL_RenderDrawRect(m_renderer, &outline_mp);
+            }
             break;
     } 
-    m_gui.render(static_cast<int>(e_gamestate));
+    
     SDL_RenderPresent(m_renderer);
+}
+
+void Game::setAIDifficulty(Difficulty difficulty) {
+    m_AI.setDifficulty(difficulty);
 }
 
 void Game::exitCallback() { if (g_game) g_game->m_running = false;}

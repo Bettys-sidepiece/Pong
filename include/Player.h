@@ -12,6 +12,8 @@ public:
 
     Player(int x, int y, int width, int height, int id);
     void handleEvent(const SDL_Event& event);
+    void move(float movement);
+
     void update(int gameAreaWidth, int uiAreaWidth);
     void render(SDL_Renderer* renderer) const;
     void setSpeed(float speed){m_speed = speed;};

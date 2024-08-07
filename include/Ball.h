@@ -22,6 +22,10 @@ public:
     void attachTo(SDL_Rect* playerRect, int isPlayer);
     void launch();
 
+    SDL_Rect getBallRect() const{return m_rect;};
+    float getSpeedX() const{return m_speedX;};
+    float getSpeedY() const{return m_speedY;};
+
     bool isAttached() const;
 
     void drawCircle(SDL_Renderer* renderer, int centerX, int centerY, int radius) const;

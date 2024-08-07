@@ -101,12 +101,16 @@ void UI::render(int state) {
             }
             break;
         case static_cast<int>(GuiState::GAME_PAUSED):
+            drawText(false, std::to_string(m_player1Score), 450, (m_screenheight/2)+90, m_subtitlefont);
+            drawText(false, std::to_string(m_player2Score), 450, (m_screenheight/2)-150, m_subtitlefont);
             drawText(true,"Paused", 25, 80, m_subtitlefont);
             for (const TextButton& button : m_buttons[state]) {
                 button.render(m_renderer);
             }
             break;
         case static_cast<int>(GuiState::GAME_RUNNING):
+            drawText(false, std::to_string(m_player1Score), 450, (m_screenheight/2)+90, m_subtitlefont);
+            drawText(false, std::to_string(m_player2Score), 450, (m_screenheight/2)-150, m_subtitlefont);
             for (const TextButton& button : m_buttons[state]) {
                 button.render(m_renderer);
             }

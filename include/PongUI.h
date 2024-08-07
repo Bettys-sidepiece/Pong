@@ -73,6 +73,12 @@ public:
     void setGameState(int state){ m_gamestate = state;}
     int getGameState() const { return m_gamestate; }
 
+    int getScreenWidth() const { return m_screenwidth; };
+    void setScreenWidth(int width) { m_screenwidth = width;};
+
+    int getScreenHeight() const { return m_screenheight; };
+    void setScreenHeight(int height) { m_screenheight = height;};
+
 private:
     CallbackFunction m_exitCallback;
     CallbackFunction m_startGameCallback;
@@ -92,6 +98,9 @@ private:
 
     int m_player1Score; // Player 1 score
     int m_player2Score; // Player 2 score
+
+    int m_screenwidth; // Width of the screen
+    int m_screenheight;
 
     TTF_Font* m_font;
     TTF_Font* m_titlefont;
