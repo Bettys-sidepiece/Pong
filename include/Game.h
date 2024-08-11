@@ -46,13 +46,8 @@ public:
     void toggleMultiPlayer();
 
     void resetGameState();
-
-    void playSound(Mix_Chunk* sound){
-        if(sound){
-            Mix_PlayChannel(-1, sound, 0);
-        }
-    }
-
+    void enableAudio();
+    void disableAudio();
     static void exitCallback();
     static void startGameCallback();
     static void pauseGameCallback();
@@ -66,12 +61,13 @@ public:
     static void selectSinglePlayer();
     static void selectMultiplayer();
     void setAIDifficulty(Difficulty difficulty);
-    
+    void selectDifficulty(int direction);
 
 private:
     void handleEvents();
     void update();
     void render();
+    Difficulty m_currentDifficulty;
 
     SDL_Window* m_window;
     SDL_Renderer* m_renderer;

@@ -89,7 +89,7 @@ UI::~UI() {
 
 // Render the UI based on the state
 void UI::render(int state) {
-    if (state < 0 || state > static_cast<int>(GuiState::GAMESEL)) {
+    if (state < 0 || state > static_cast<int>(GuiState::TOGGLEMUSIC)) {
         std::cerr << "Invalid state in UI::render: " << state << std::endl;
         return;
     }
@@ -141,8 +141,10 @@ void UI::updateScore(int player1Score, int player2Score) {
 
 // Handle UI events
 void UI::handleEvent(SDL_Event& event) {
-    for (auto& button : m_buttons[m_gamestate]) {
-        button.handleEvent(event);
+    if (m_gamestate >= static_cast<int>(GuiState::MAIN_GUI) && m_gamestate <= static_cast<int>(GuiState::GAMESEL)){
+        for (auto& button : m_buttons[m_gamestate]) {
+            button.handleEvent(event);
+        }
     }
 }
 
@@ -231,7 +233,7 @@ void UI::initButtons(CallbackFunction exitCallback, CallbackFunction startCallba
     m_buttons[0].emplace_back(50, 480, "Exit Game", m_font, defaultColor, hoverColor, m_exitCallback, clickSound, hoverSound);
 
     // Settings Buttons
-    m_buttons[1].emplace_back(50, 300, "Music", m_font, defaultColor, hoverColor, m_toggleMusicCallback, clickSound, hoverSound);
+    m_buttons[1].emplace_back(50, 300, "Audio", m_font, defaultColor, hoverColor, m_toggleMusicCallback, clickSound, hoverSound);
     m_buttons[1].emplace_back(50, 360, "Difficulty", m_font, defaultColor, hoverColor, m_changeDifficultyCallback, clickSound, hoverSound);
     m_buttons[1].emplace_back(50, 420, "Back", m_font, defaultColor, hoverColor, m_returnToMenuCallback, clickSound, hoverSound);
 

@@ -12,8 +12,8 @@ Game::Game()
       m_ball(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH), (m_windowHeight - 200)-10, 10),
       m_ballAttachedToPlayer1(true), m_ballAttachedToPlayer2(false),
       m_dT(0.0f), m_lT(0), m_gui(nullptr, 0, 0, nullptr),
-      m_AI(Difficulty::EASY),
-      m_musicActive(false),
+      m_AI(Difficulty::NORMAL),
+      m_musicActive(true),m_currentDifficulty(Difficulty::NORMAL),
       m_clickSound(nullptr), m_hoverSound(nullptr),m_paddleHitSound(nullptr)
 {
     m_ball.attachTo(&m_player1.p_getRect(), m_player1.m_id);
@@ -75,9 +75,9 @@ void Game::setMusic(){
     if(e_gamestate == GameState::SETTINGS) {
         m_gui.setGameState(static_cast<int>(e_gamestate));
         if(m_musicActive == true){
-            m_musicActive = false;
+            disableAudio();
         }else{
-            m_musicActive = true;
+            enableAudio();
         }
     }
 }
@@ -85,6 +85,7 @@ void Game::setMusic(){
 void Game::setDifficulty(){
     if(e_gamestate == GameState::SETTINGS) {
         e_gamestate = GameState::DIFFICULTYSEL;
+        prevgamestate = GameState::SETTINGS;
         m_gui.setGameState(static_cast<int>(e_gamestate));
     }
 
@@ -173,6 +174,7 @@ bool Game::initialize() {
         return false;
     }
 
+
     TTF_Font* titlefont = TTF_OpenFont("Assets/Pixelmania.ttf", 55);
     if (!titlefont) {
         std::cout << "Error: SDL_ttf Font Loading " << TTF_GetError() << "\n";
@@ -188,9 +190,9 @@ bool Game::initialize() {
         return false;
     }
 
-    m_clickSound = Mix_LoadWAV("Assets/Ding.wav");
-    m_hoverSound = Mix_LoadWAV("Assets/Ding.wav");
-    m_paddleHitSound = Mix_LoadWAV("Assets/Pong.wav");
+    m_clickSound = Mix_LoadWAV("Assets/clicksound3.wav");
+    m_hoverSound = Mix_LoadWAV("Assets/clicksound1.wav");
+    m_paddleHitSound = Mix_LoadWAV("Assets/Ping.wav");
 
     if (!m_clickSound || !m_hoverSound || !m_paddleHitSound) {
         std::cout << "Failed to load sound effects! SDL_mixer Error: " << Mix_GetError() << "\n";
@@ -247,13 +249,57 @@ void Game::handleEvents() {
 
         if (e_gamestate == GameState::RUNNING) {
             m_player1.handleEvent(event);
-            if (m_ballAttachedToPlayer2) {
+            if (m_ballAttachedToPlayer2 && m_ball.getBallRect().y > m_player2.getRect().y) {
                 m_ball.launch();
                 m_ballAttachedToPlayer1 = false;
                 m_ballAttachedToPlayer2 = false;
             }
         }
 
+        if (e_gamestate == GameState::DIFFICULTYSEL) {
+            if (event.type == SDL_KEYDOWN) {
+                if (event.type == SDL_KEYDOWN) {
+                switch (event.key.keysym.sym) {
+                    case SDLK_LEFT:
+                        selectDifficulty(-1);
+                        if (m_clickSound) {
+                            Mix_PlayChannel(-1, m_clickSound, 0);
+                        }
+                        break;
+                    
+                    case SDLK_RIGHT:
+                        selectDifficulty(1);
+                        if (m_clickSound) {
+                            Mix_PlayChannel(-1, m_clickSound, 0);
+                        }
+                        break;
+
+                    case SDLK_RETURN:
+                        e_gamestate = GameState::SETTINGS;
+                        prevgamestate = GameState::DIFFICULTYSEL;
+                        m_gui.setGameState(static_cast<int>(e_gamestate));
+                        if (m_clickSound) {
+                            Mix_PlayChannel(-1, m_clickSound, 0);
+                        }
+                        break;
+                }
+            } else if (event.type == SDL_MOUSEBUTTONDOWN) {
+                int mouseX = event.button.x;
+                int centerX = UI_AREA_WIDTH + m_gameAreaWidth / 2;
+                int radius = 150;
+                int dialWidth = radius * 2;
+                
+                if (mouseX < centerX - radius / 2) {
+                    m_currentDifficulty = Difficulty::HARD;
+                } else if (mouseX < centerX + radius / 2) {
+                    m_currentDifficulty = Difficulty::EASY;
+                } else {
+                    m_currentDifficulty = Difficulty::NORMAL;
+                }
+                m_AI.setDifficulty(m_currentDifficulty);
+            }
+            }
+        }
         m_gui.handleEvent(event);
     }
 }
@@ -297,19 +343,24 @@ void Game::update() {
 
             break;
 
-        case GameState::PAUSED:
+        case GameState::PAUSED:{
             // Do nothing or update pause menu
             break;
-        case GameState::SETTINGS:
+            }
+        case GameState::SETTINGS:{
             // Update settings menu
             break;
-        case GameState::GAMESEL:
+            }
+        case GameState::GAMESEL:{
             // Update game selection menu
             break;
-        case GameState::DIFFICULTYSEL:
+            }
+        case GameState::DIFFICULTYSEL:{
             break;
-        case GameState::TOGGLEMUSIC:
+            }
+        case GameState::TOGGLEMUSIC:{
             break;
+        }
     }
     m_gui.update();
 }
@@ -327,15 +378,15 @@ void Game::render() {
     SDL_Rect rightGuard = {(m_windowWidth-5), 0, 25, m_windowHeight};
     SDL_Rect centerLine = {(UI_AREA_WIDTH+5),(m_windowHeight/2), (m_gameAreaWidth-10),25};
 
-    SDL_Rect outline_sp = {380,320,10,10};
-    SDL_Rect outline_mp = {380,380,10,10};
+    SDL_Rect outline_sp = {370,310,20,20};
+    SDL_Rect outline_mp = {370,375,20,20};
 
-    SDL_Rect outline_audio = {380, 280,10,10};
+    SDL_Rect outline_audio = {330, 312, 20, 20};
 
     m_gui.render(static_cast<int>(e_gamestate));
 
     switch (e_gamestate) {
-        case GameState::MENU:
+        case GameState::MENU:{
             SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
             SDL_SetRenderDrawColor(m_renderer,200,200,200,150);
             SDL_RenderFillRect(m_renderer, &leftGuard);
@@ -352,7 +403,8 @@ void Game::render() {
             m_player2.render(m_renderer);
             // Render menu
             break;
-        case GameState::RUNNING:
+        }
+        case GameState::RUNNING:{
             SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
             SDL_SetRenderDrawColor(m_renderer,200,200,200,175);
             SDL_RenderFillRect(m_renderer, &leftGuard);
@@ -369,8 +421,8 @@ void Game::render() {
             m_player2.render(m_renderer);
             m_ball.render(m_renderer);
             break;
-
-        case GameState::PAUSED:
+    }
+        case GameState::PAUSED:{
             // Render paused game and pause menu
             SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
             SDL_SetRenderDrawColor(m_renderer,200,200,200,175);
@@ -392,7 +444,8 @@ void Game::render() {
             SDL_SetRenderDrawColor(m_renderer, 125, 125, 125, 50);
             SDL_RenderFillRect(m_renderer, &pauseArea);
             break;
-        case GameState::SETTINGS:
+        }
+        case GameState::SETTINGS:{
             // Render settings menu
             SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
             if(m_musicActive == true){
@@ -400,10 +453,9 @@ void Game::render() {
             }else{
                 SDL_RenderDrawRect(m_renderer, &outline_audio);
             }
-            
-
             break;
-        case GameState::GAMESEL:
+        }
+        case GameState::GAMESEL:{
             // Render game selection menu
             SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
             SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
@@ -417,10 +469,43 @@ void Game::render() {
                 SDL_RenderDrawRect(m_renderer, &outline_mp);
             }
             break;
-        case GameState::DIFFICULTYSEL:
+        }
+        case GameState::DIFFICULTYSEL:{           
+            std::cout << "Rendering difficulty selection screen" << std::endl;
+
+            int centerX = UI_AREA_WIDTH / 2;
+            int centerY = m_windowHeight / 2;
+
+            // Draw the selected difficulty
+            SDL_SetRenderDrawColor(m_renderer, 200, 200, 200, 255);
+            std::string difficultyText;
+            switch (m_currentDifficulty) {
+                case Difficulty::EASY:
+                    difficultyText = "EASY";
+                    break;
+                case Difficulty::NORMAL:
+                    difficultyText = "NORMAL";
+                    break;
+                case Difficulty::HARD:
+                    difficultyText = "HARD";
+                    break;
+            }
+            m_gui.drawText(true, difficultyText, centerX, centerY - 30, m_font);
+
+            // Draw navigation instructions
+            SDL_SetRenderDrawColor(m_renderer, 150, 150, 150, 255);
+
+            m_gui.drawText(true, "Difficulty", centerX, 200,m_font);
+            m_gui.drawText(true, "< LEFT | RIGHT >", centerX, centerY + 70, m_font);
+            m_gui.drawText(true, "ENTER to confirm", centerX, centerY + 140, m_font);
+
+            std::cout << "Current difficulty: " << static_cast<int>(m_currentDifficulty) << std::endl;
+            std::cout << "Finished rendering difficulty selection screen" << std::endl;
             break;
-        case GameState::TOGGLEMUSIC:
+        }
+        case GameState::TOGGLEMUSIC:{
             break;
+        }
     } 
     
     SDL_RenderPresent(m_renderer);
@@ -462,4 +547,36 @@ void Game::resetGameState() {
 
     // Update the GUI with reset scores
     m_gui.updateScore(m_player1.m_score, m_player2.m_score);
+}
+
+void Game::enableAudio() {
+    if (!m_musicActive) {
+        m_clickSound->volume = 128;
+        m_hoverSound->volume = 128;
+        m_paddleHitSound->volume = 128;
+        m_musicActive = true;
+    }
+}
+
+void Game::disableAudio() {
+    if (m_musicActive) {
+        m_clickSound->volume = 0;
+        m_hoverSound->volume = 0;
+        m_paddleHitSound->volume = 0;
+        m_musicActive = false;
+    }
+}
+
+void Game::selectDifficulty(int direction) {
+    int difficultyLevel = static_cast<int>(m_currentDifficulty);
+    difficultyLevel = (difficultyLevel + direction + 3) % 3;
+    m_currentDifficulty = static_cast<Difficulty>(difficultyLevel);
+    m_AI.setDifficulty(m_currentDifficulty);
+    std::cout << "Difficulty changed to: ";
+    switch (m_currentDifficulty) {
+        case Difficulty::HARD: std::cout << "Hard"; break;
+        case Difficulty::EASY: std::cout << "Easy"; break;
+        case Difficulty::NORMAL: std::cout << "Normal"; break;
+    }
+    std::cout << "\n";
 }

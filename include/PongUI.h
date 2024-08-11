@@ -42,7 +42,9 @@ enum class GuiState {
     SETTINGS_GUI,
     GAME_PAUSED,
     GAME_RUNNING,
-    GAMESEL
+    GAMESEL,
+    DIFFICULTYSEL,
+    TOGGLEMUSIC,
 };
 
 class UI {
@@ -82,6 +84,8 @@ public:
 
     int getScreenHeight() const { return m_screenheight; };
     void setScreenHeight(int height) { m_screenheight = height;};
+    void drawText(bool header, const std::string& text, int x, int y, TTF_Font* font);
+
 
 private:
     CallbackFunction m_exitCallback;
@@ -112,8 +116,6 @@ private:
 
     std::vector<TextButton> m_buttons[5];
     int m_gamestate;
-
-    void drawText(bool header, const std::string& text, int x, int y, TTF_Font* font);
     void drawUIBackground();
 };
 
