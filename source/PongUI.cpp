@@ -2,8 +2,8 @@
 #include <iostream>
 
 // Constructor
-TextButton::TextButton(int x, int y, const std::string& text, TTF_Font* font, SDL_Color color, SDL_Color hoverColor, CallbackFunction callback)
-    : m_rect{x, y, 300, 50}, m_text(text), m_color(color), m_hoverColor(hoverColor), m_currentColor(color), m_font(font), m_isHovered(false), m_onClick(callback) {
+TextButton::TextButton(int x, int y, const std::string& text, TTF_Font* font, SDL_Color color, SDL_Color hoverColor, CallbackFunction callback, Mix_Chunk* clickSound, Mix_Chunk* hoverSound)
+    : m_rect{x, y, 300, 50}, m_text(text), m_color(color), m_hoverColor(hoverColor), m_currentColor(color), m_font(font), m_isHovered(false), m_onClick(callback), m_clickSound(clickSound), m_hoverSound(hoverSound){
 }
 
 // Destructor
@@ -51,12 +51,19 @@ void TextButton::render(SDL_Renderer* renderer) const {
 // Handle events related to the button
 void TextButton::handleEvent(const SDL_Event& event) {
     if (event.type == SDL_MOUSEMOTION) {
+        bool wasHovered = m_isHovered;
         int x = event.motion.x;
         int y = event.motion.y;
         m_isHovered = (x >= m_rect.x && x <= m_rect.x + m_rect.w && y >= m_rect.y && y <= m_rect.y + m_rect.h);
+        if (m_isHovered && !wasHovered && m_hoverSound) {
+            Mix_PlayChannel(-1, m_hoverSound, 0);
+        }
         updateColor();
     } else if (event.type == SDL_MOUSEBUTTONDOWN) {
         if (isClicked(event) && m_onClick != nullptr) {
+            if (m_clickSound) {
+                Mix_PlayChannel(-1, m_clickSound, 0);
+            }
             m_onClick();
         }
     }
@@ -193,8 +200,8 @@ void UI::initButtons(CallbackFunction exitCallback, CallbackFunction startCallba
                      CallbackFunction settingsCallback, CallbackFunction playModeCallback, 
                      CallbackFunction returnToMenuCallback, CallbackFunction changeDifficultyCallback, 
                      CallbackFunction toggleMusicCallback, CallbackFunction selectSinglePlayerCallback, 
-                     CallbackFunction selectMultiplayerCallback) {
-    
+                     CallbackFunction selectMultiplayerCallback,
+                     Mix_Chunk* clickSound,Mix_Chunk* hoverSound){
     // Set callbacks for buttons
     m_exitCallback = exitCallback;
     m_startGameCallback = startCallback;
@@ -218,29 +225,26 @@ void UI::initButtons(CallbackFunction exitCallback, CallbackFunction startCallba
     }
 
     // Menu Buttons
-    m_buttons[0].emplace_back(50, 300, "Start Game", m_font, defaultColor, hoverColor, m_startGameCallback);
-    m_buttons[0].emplace_back(50, 360, "Play Mode", m_font, defaultColor, hoverColor, m_playModeCallback);
-    m_buttons[0].emplace_back(50, 420, "Settings", m_font, defaultColor, hoverColor, m_settingsCallback);
-    m_buttons[0].emplace_back(50, 480, "Exit Game", m_font, defaultColor, hoverColor, m_exitCallback);
+    m_buttons[0].emplace_back(50, 300, "Start Game", m_font, defaultColor, hoverColor, m_startGameCallback, clickSound, hoverSound);
+    m_buttons[0].emplace_back(50, 360, "Play Mode", m_font, defaultColor, hoverColor, m_playModeCallback, clickSound, hoverSound);
+    m_buttons[0].emplace_back(50, 420, "Settings", m_font, defaultColor, hoverColor, m_settingsCallback, clickSound, hoverSound);
+    m_buttons[0].emplace_back(50, 480, "Exit Game", m_font, defaultColor, hoverColor, m_exitCallback, clickSound, hoverSound);
 
     // Settings Buttons
-    m_buttons[1].emplace_back(50, 300, "Music", m_font, defaultColor, hoverColor, m_toggleMusicCallback);
-    m_buttons[1].emplace_back(50, 360, "Difficulty", m_font, defaultColor, hoverColor, m_changeDifficultyCallback);
-    m_buttons[1].emplace_back(50, 420, "Back", m_font, defaultColor, hoverColor, m_returnToMenuCallback);
+    m_buttons[1].emplace_back(50, 300, "Music", m_font, defaultColor, hoverColor, m_toggleMusicCallback, clickSound, hoverSound);
+    m_buttons[1].emplace_back(50, 360, "Difficulty", m_font, defaultColor, hoverColor, m_changeDifficultyCallback, clickSound, hoverSound);
+    m_buttons[1].emplace_back(50, 420, "Back", m_font, defaultColor, hoverColor, m_returnToMenuCallback, clickSound, hoverSound);
 
     // Gameplay Paused
-    m_buttons[2].emplace_back(50, 300, "Resume", m_font, defaultColor, hoverColor, m_resumeCallback);
-    m_buttons[2].emplace_back(50, 360, "Settings", m_font, defaultColor, hoverColor, m_settingsCallback);
-    m_buttons[2].emplace_back(50, 420, "Quit to Menu", m_font, defaultColor, hoverColor, m_returnToMenuCallback);
+    m_buttons[2].emplace_back(50, 360, "Resume", m_font, defaultColor, hoverColor, m_resumeCallback, clickSound, hoverSound);
+    m_buttons[2].emplace_back(50, 420, "Quit to Menu", m_font, defaultColor, hoverColor, m_returnToMenuCallback, clickSound, hoverSound);
 
     // Gameplay Active
-    m_buttons[3].emplace_back(50, 300, "Pause", m_font, defaultColor, hoverColor, m_pauseCallback);
+    m_buttons[3].emplace_back(50, 300, "Pause", m_font, defaultColor, hoverColor, m_pauseCallback, clickSound, hoverSound);
 
     // Game Mode Selection Buttons
-    m_buttons[4].emplace_back(50, 300, "Single Player", m_font, defaultColor, hoverColor, m_selectSinglePlayerCallback);
-    m_buttons[4].emplace_back(50, 360, "Multiplayer", m_font, defaultColor, hoverColor, m_selectMultiplayerCallback);
-    m_buttons[4].emplace_back(50, 420, "Back", m_font, defaultColor, hoverColor, m_returnToMenuCallback);
+    m_buttons[4].emplace_back(50, 300, "Single Player", m_font, defaultColor, hoverColor, m_selectSinglePlayerCallback, clickSound, hoverSound);
+    m_buttons[4].emplace_back(50, 360, "Multiplayer", m_font, defaultColor, hoverColor, m_selectMultiplayerCallback, clickSound, hoverSound);
+    m_buttons[4].emplace_back(50, 420, "Back", m_font, defaultColor, hoverColor, m_returnToMenuCallback, clickSound, hoverSound);
 
-    // Debug output to confirm callbacks are set
-    std::cout << "UI::initButtons - Callbacks are set." << std::endl;
 }

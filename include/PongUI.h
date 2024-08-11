@@ -3,6 +3,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h>
 #include <string>
 #include <vector>
 #include <functional>
@@ -11,6 +12,8 @@ using CallbackFunction = std::function<void()>;
 
 class TextButton {
 private:
+    Mix_Chunk* m_clickSound;
+    Mix_Chunk* m_hoverSound;
     SDL_Rect m_rect;
     std::string m_text;
     SDL_Color m_color;
@@ -24,7 +27,7 @@ private:
     void updateColor();
 
 public:
-    TextButton(int x, int y, const std::string& text, TTF_Font* font, SDL_Color color, SDL_Color hoverColor, CallbackFunction callback);
+    TextButton(int x, int y, const std::string& text, TTF_Font* font, SDL_Color color, SDL_Color hoverColor, CallbackFunction callback, Mix_Chunk* clickSound, Mix_Chunk* hoverSound);
     ~TextButton();
 
     void render(SDL_Renderer* renderer) const;
@@ -56,7 +59,8 @@ public:
                     CallbackFunction settingsCallback, CallbackFunction playModeCallback, 
                     CallbackFunction returnToMenuCallback, CallbackFunction changeDifficultyCallback, 
                     CallbackFunction toggleMusicCallback, CallbackFunction selectSinglePlayerCallback, 
-                    CallbackFunction selectMultiplayerCallback);
+                    CallbackFunction selectMultiplayerCallback,
+                    Mix_Chunk* clickSound,Mix_Chunk* hoverSound);
 
     UI(SDL_Renderer* renderer, int uiAreaWidth, int windowHeight, TTF_Font* font);
     ~UI();

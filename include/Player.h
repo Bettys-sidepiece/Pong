@@ -26,6 +26,8 @@ public:
     
     int getVelocityX() const { return m_velocityX; }
 
+    void setPosition(int x, int y){m_rect.x = x;m_rect.y =y;};
+
 
 
 private:

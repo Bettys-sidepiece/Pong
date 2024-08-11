@@ -7,12 +7,14 @@ Game::Game()
     : m_window(nullptr), m_renderer(nullptr), m_running(false),
       m_windowWidth(1000), m_windowHeight(1000), 
       m_gameAreaWidth(m_windowWidth - UI_AREA_WIDTH),
-      m_player1(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, m_windowHeight - 225, RECT_WIDTH, RECT_HEIGHT, 1),
-      m_player2(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, 50, RECT_WIDTH, RECT_HEIGHT, -1),
-      m_ball(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, (m_windowHeight - 200)-10, 10),
+      m_player1(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH), m_windowHeight - 225, RECT_WIDTH, RECT_HEIGHT, 1),
+      m_player2(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH), 50, RECT_WIDTH, RECT_HEIGHT, -1),
+      m_ball(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH), (m_windowHeight - 200)-10, 10),
       m_ballAttachedToPlayer1(true), m_ballAttachedToPlayer2(false),
       m_dT(0.0f), m_lT(0), m_gui(nullptr, 0, 0, nullptr),
-      m_AI(Difficulty::NORMAL)
+      m_AI(Difficulty::EASY),
+      m_musicActive(false),
+      m_clickSound(nullptr), m_hoverSound(nullptr),m_paddleHitSound(nullptr)
 {
     m_ball.attachTo(&m_player1.p_getRect(), m_player1.m_id);
     e_gamestate = GameState::MENU;
@@ -26,6 +28,12 @@ Game::~Game() {
     if (m_font) TTF_CloseFont(m_font);
     if (m_gui.getTitleFont()) TTF_CloseFont(m_gui.getTitleFont());
 
+    if (m_clickSound) Mix_FreeChunk(m_clickSound);
+    if (m_hoverSound) Mix_FreeChunk(m_hoverSound);
+    if (m_paddleHitSound) Mix_FreeChunk(m_paddleHitSound);
+
+    Mix_Quit();
+
     g_game = nullptr;
     TTF_Quit();
     SDL_Quit();
@@ -37,11 +45,13 @@ void Game::startGame() {
         m_gui.setGameState(static_cast<int>(e_gamestate));
         m_player1.m_score = 0;
         m_player2.m_score = 0;
+        resetGameState();
     }
 }
 
 void Game::pauseGame() {
     if (e_gamestate == GameState::RUNNING) {
+        prevgamestate = GameState::RUNNING;
         e_gamestate = GameState::PAUSED;
         m_gui.setGameState(static_cast<int>(e_gamestate));
     }
@@ -64,12 +74,17 @@ void Game::gameSettings() {
 void Game::setMusic(){
     if(e_gamestate == GameState::SETTINGS) {
         m_gui.setGameState(static_cast<int>(e_gamestate));
+        if(m_musicActive == true){
+            m_musicActive = false;
+        }else{
+            m_musicActive = true;
+        }
     }
-
 }
 
 void Game::setDifficulty(){
     if(e_gamestate == GameState::SETTINGS) {
+        e_gamestate = GameState::DIFFICULTYSEL;
         m_gui.setGameState(static_cast<int>(e_gamestate));
     }
 
@@ -78,14 +93,25 @@ void Game::setDifficulty(){
 void Game::backToMenu(){
     if(e_gamestate == GameState::SETTINGS || e_gamestate == GameState::GAMESEL || 
         e_gamestate == GameState::PAUSED) 
-        {
-            e_gamestate = GameState::MENU;
-            m_gui.setGameState(static_cast<int>(e_gamestate));
+        {   
+            if(prevgamestate == GameState::PAUSED && prevgamestate == GameState::SETTINGS){
+                e_gamestate = GameState::PAUSED;
+                m_gui.setGameState(static_cast<int>(e_gamestate));
+                resetGameState();
+
+            }else if(prevgamestate == GameState::RUNNING){
+                e_gamestate = GameState::MENU;
+                m_gui.setGameState(static_cast<int>(e_gamestate));
+            }else{
+                e_gamestate = GameState::MENU;
+                m_gui.setGameState(static_cast<int>(e_gamestate));
+            }
         }
 }
 
 void Game::playMode() {
     if (e_gamestate == GameState::MENU) {
+        prevgamestate = GameState::MENU;
         e_gamestate = GameState::GAMESEL;
         m_gui.setGameState(static_cast<int>(e_gamestate));
     }
@@ -100,10 +126,11 @@ void Game::toggleSinglePlayer(){
 
 void Game::toggleMultiPlayer(){
     if (e_gamestate == GameState::GAMESEL) {
-        e_gamemode = GameMode::MULTI_PLAYER;
-        m_gui.setGameState(static_cast<int>(e_gamestate));
+        //e_gamemode = GameMode::MULTI_PLAYER;
+        //m_gui.setGameState(static_cast<int>(e_gamestate));
     }
 }
+
 
 bool Game::initialize() {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -155,6 +182,20 @@ bool Game::initialize() {
     if (!titlefont) {
         std::cout << "Error: SDL_ttf Font Loading " << TTF_GetError() << "\n";
     }
+
+    if (Mix_OpenAudio(44100, MIX_DEFAULT_FORMAT, 2, 2048) < 0) {
+        std::cout << "SDL_mixer could not initialize! SDL_mixer Error: " << Mix_GetError() << "\n";
+        return false;
+    }
+
+    m_clickSound = Mix_LoadWAV("Assets/Ding.wav");
+    m_hoverSound = Mix_LoadWAV("Assets/Ding.wav");
+    m_paddleHitSound = Mix_LoadWAV("Assets/Pong.wav");
+
+    if (!m_clickSound || !m_hoverSound || !m_paddleHitSound) {
+        std::cout << "Failed to load sound effects! SDL_mixer Error: " << Mix_GetError() << "\n";
+        return false;
+    }
     
     m_gui = UI(m_renderer, UI_AREA_WIDTH, m_windowHeight, m_font);
     m_gui.setTitleFont(titlefont);
@@ -168,7 +209,7 @@ bool Game::initialize() {
     m_gui.initButtons(exitCallback, startGameCallback, pauseGameCallback, 
                       resumeCallback, gameSettingsCallback, playModeCallback,
                       returnToMenu, changeDifficulty, toggleMusic, selectSinglePlayer,
-                      selectMultiplayer);
+                      selectMultiplayer,m_clickSound,m_hoverSound);
     
     return true;
 }
@@ -233,13 +274,13 @@ void Game::update() {
 
             if (m_ballAttachedToPlayer1) {
                 m_ball.attachTo(&m_player1.p_getRect(), m_player1.m_id);
-                m_ball.update(m_gameAreaWidth, UI_AREA_WIDTH, score);
+                m_ball.update(m_gameAreaWidth, UI_AREA_WIDTH, score, m_paddleHitSound);
             } else if (m_ballAttachedToPlayer2) {
                 m_ball.attachTo(&m_player2.p_getRect(), m_player2.m_id);
-                m_ball.update(m_gameAreaWidth, UI_AREA_WIDTH, score);
+                m_ball.update(m_gameAreaWidth, UI_AREA_WIDTH, score,m_paddleHitSound);
             } else {
-                m_ball.update(m_gameAreaWidth, UI_AREA_WIDTH, score);
-                m_ball.collisionDetection(m_player1.getRect(), m_player2.getRect());
+                m_ball.update(m_gameAreaWidth, UI_AREA_WIDTH, score,m_paddleHitSound);
+                m_ball.collisionDetection(m_player1.getRect(), m_player2.getRect(),m_paddleHitSound);
             }
 
             if (score > 0) {
@@ -265,6 +306,10 @@ void Game::update() {
         case GameState::GAMESEL:
             // Update game selection menu
             break;
+        case GameState::DIFFICULTYSEL:
+            break;
+        case GameState::TOGGLEMUSIC:
+            break;
     }
     m_gui.update();
 }
@@ -284,6 +329,8 @@ void Game::render() {
 
     SDL_Rect outline_sp = {380,320,10,10};
     SDL_Rect outline_mp = {380,380,10,10};
+
+    SDL_Rect outline_audio = {380, 280,10,10};
 
     m_gui.render(static_cast<int>(e_gamestate));
 
@@ -347,6 +394,12 @@ void Game::render() {
             break;
         case GameState::SETTINGS:
             // Render settings menu
+            SDL_SetRenderDrawColor(m_renderer, 255, 255, 255, 255);
+            if(m_musicActive == true){
+                SDL_RenderFillRect(m_renderer, &outline_audio);
+            }else{
+                SDL_RenderDrawRect(m_renderer, &outline_audio);
+            }
             
 
             break;
@@ -363,6 +416,10 @@ void Game::render() {
                 SDL_RenderFillRect(m_renderer, &outline_sp);
                 SDL_RenderDrawRect(m_renderer, &outline_mp);
             }
+            break;
+        case GameState::DIFFICULTYSEL:
+            break;
+        case GameState::TOGGLEMUSIC:
             break;
     } 
     
@@ -384,3 +441,25 @@ void Game::changeDifficulty(){if(g_game) g_game->setDifficulty();}
 void Game::returnToMenu(){if(g_game) g_game->backToMenu();}
 void Game::selectSinglePlayer(){if (g_game) g_game->toggleSinglePlayer();}
 void Game::selectMultiplayer(){if(g_game) g_game->toggleMultiPlayer();}
+
+void Game::resetGameState() {
+    // Reset player 1 position
+    m_player1.setPosition(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, m_windowHeight - 100
+    
+    );
+    // Reset player 2 position
+    m_player2.setPosition(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, 50);
+    // Reset ball position
+    m_ball.setPosition(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, (m_windowHeight - 200) - 10);
+    // Attach ball to player 1
+    m_ball.attachTo(&m_player1.p_getRect(), m_player1.m_id);
+    m_ballAttachedToPlayer1 = true;
+    m_ballAttachedToPlayer2 = false;
+
+    // Reset scores
+    m_player1.m_score = 0;
+    m_player2.m_score = 0;
+
+    // Update the GUI with reset scores
+    m_gui.updateScore(m_player1.m_score, m_player2.m_score);
+}

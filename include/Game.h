@@ -3,6 +3,7 @@
 
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_mixer.h>
 #include "Player.h"
 #include "GameModifiers.h"
 #include "Ball.h"
@@ -14,7 +15,9 @@ enum GameState{
         SETTINGS,
         PAUSED,
         RUNNING,
-        GAMESEL
+        GAMESEL,
+        DIFFICULTYSEL,
+        TOGGLEMUSIC,
     };
 
 enum class GameMode{
@@ -26,7 +29,7 @@ enum class GameMode{
 class Game {
 public:
     static Game* g_game;
-
+    
     Game();
     ~Game();
     bool initialize();
@@ -42,6 +45,14 @@ public:
     void toggleSinglePlayer();
     void toggleMultiPlayer();
 
+    void resetGameState();
+
+    void playSound(Mix_Chunk* sound){
+        if(sound){
+            Mix_PlayChannel(-1, sound, 0);
+        }
+    }
+
     static void exitCallback();
     static void startGameCallback();
     static void pauseGameCallback();
@@ -55,9 +66,9 @@ public:
     static void selectSinglePlayer();
     static void selectMultiplayer();
     void setAIDifficulty(Difficulty difficulty);
+    
 
 private:
-    
     void handleEvents();
     void update();
     void render();
@@ -79,6 +90,7 @@ private:
     Ball m_ball;
     bool m_ballAttachedToPlayer1;
     bool m_ballAttachedToPlayer2;
+    bool m_musicActive;
 
     UI m_gui;
     
@@ -87,9 +99,14 @@ private:
     Uint32 m_lT;
 
     GameState e_gamestate;
+    GameState prevgamestate;
     GameMode e_gamemode;
 
     ComputerAI m_AI;
+
+    Mix_Chunk* m_clickSound;
+    Mix_Chunk* m_hoverSound;
+    Mix_Chunk* m_paddleHitSound;
 
 };
 

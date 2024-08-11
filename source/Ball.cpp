@@ -2,10 +2,11 @@
 #include <cmath>
 #include <iostream>
 
+
 Ball::Ball(int x, int y, int radius)
     : m_rect{x - radius, y - radius, 2 * radius, 2 * radius}, m_radius(radius), m_speedX(0), m_speedY(0), m_ballIsAttached(0), m_attachedTo(nullptr) {}
 
-void Ball::update(int gameAreaWidth, int uiAreaWidth,int &score) 
+void Ball::update(int gameAreaWidth, int uiAreaWidth,int &score, Mix_Chunk* paddleHitSound) 
 {
    
     if(!isAttached() && m_attachedTo != nullptr){
@@ -26,11 +27,13 @@ void Ball::update(int gameAreaWidth, int uiAreaWidth,int &score)
         if (m_rect.x < uiAreaWidth) {
             m_rect.x = uiAreaWidth;
             m_speedX = -m_speedX;
+            Mix_PlayChannel(-1, paddleHitSound, 0);
         }
 
         if(m_rect.x > (uiAreaWidth + gameAreaWidth)- m_rect.w){
             m_rect.x = gameAreaWidth + uiAreaWidth - m_rect.w;
             m_speedX = -m_speedX;
+            Mix_PlayChannel(-1, paddleHitSound, 0);
         }
 
         if (m_rect.y < 0) {
@@ -47,13 +50,16 @@ void Ball::render(SDL_Renderer* renderer) const
     drawCircle(renderer, m_rect.x + m_radius, m_rect.y + m_radius, m_radius);
 }
 
-void Ball::collisionDetection(const SDL_Rect &playerRect, const SDL_Rect &player2Rect) 
+void Ball::collisionDetection(const SDL_Rect &playerRect, const SDL_Rect &player2Rect, Mix_Chunk* paddleHitSound) 
 {
     if (SDL_HasIntersection(&m_rect, &playerRect)) {
         m_speedY = -std::abs(m_speedY); // Reverse Y direction on collision
         int ballCenter = m_rect.x + m_radius;
         int paddleCenter = playerRect.x + playerRect.w / 2;
         m_speedX += 0.1f * (ballCenter - paddleCenter);
+        if (paddleHitSound) {
+            Mix_PlayChannel(-1, paddleHitSound, 0);
+        }
     }
 
     if (SDL_HasIntersection(&m_rect, &player2Rect)) {
@@ -61,6 +67,9 @@ void Ball::collisionDetection(const SDL_Rect &playerRect, const SDL_Rect &player
         int ballCenter = m_rect.x + m_radius;
         int paddleCenter = player2Rect.x + player2Rect.w / 2;
         m_speedX += 0.1f * (ballCenter - paddleCenter);
+        if (paddleHitSound) {
+            Mix_PlayChannel(-1, paddleHitSound, 0);
+        }
     }
 }
 
@@ -80,7 +89,7 @@ void Ball::launch()
 {
     m_ballIsAttached = 0;
     m_speedX = 0.0f;
-    m_speedY = 5.0f;
+    m_speedY = 17.5f;
 }
 
 bool Ball::isAttached() const
