@@ -26,7 +26,7 @@ A modern implementation of the classic Pong game using SDL2 and C++.
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/pong-game.git
+   git clone https://github.com/bettys-sidepiece/pong-game.git
    cd pong-game
    ```
 
