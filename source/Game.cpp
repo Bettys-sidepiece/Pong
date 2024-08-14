@@ -14,6 +14,7 @@ Game::Game()
       m_dT(0.0f), m_lT(0), m_gui(nullptr, 0, 0, nullptr),
       m_AI(Difficulty::NORMAL),
       m_musicActive(true),m_currentDifficulty(Difficulty::NORMAL),
+      m_matchWins(2), m_matchEnded(false), m_matchWinner(0),
       m_clickSound(nullptr), m_hoverSound(nullptr),m_paddleHitSound(nullptr)
 {
     m_ball.attachTo(&m_player1.p_getRect(), m_player1.m_id);
@@ -45,6 +46,10 @@ void Game::startGame() {
         m_gui.setGameState(static_cast<int>(e_gamestate));
         m_player1.m_score = 0;
         m_player2.m_score = 0;
+        m_gamesPlayed = 1;
+        m_gameScoreP1 = 0;
+        m_gameScoreP2 = 0;
+        m_matchEnded = false;
         resetGameState();
     }
 }
@@ -132,6 +137,22 @@ void Game::toggleMultiPlayer(){
     }
 }
 
+void Game::gameRestart(){
+    if(e_gamestate == GameState::PAUSED){
+        e_gamestate = GameState::RUNNING;
+        m_gui.setGameState(static_cast<int>(e_gamestate));
+        m_player1.m_score = 0;
+        m_player2.m_score = 0;
+        m_gamesPlayed = 0;
+        m_gameScoreP1 = 0;
+        m_gameScoreP2 = 0;
+        m_matchEnded = false;
+        resetGameState();
+    }
+}
+
+
+
 
 bool Game::initialize() {
     if (SDL_Init(SDL_INIT_VIDEO) != 0) {
@@ -211,7 +232,7 @@ bool Game::initialize() {
     m_gui.initButtons(exitCallback, startGameCallback, pauseGameCallback, 
                       resumeCallback, gameSettingsCallback, playModeCallback,
                       returnToMenu, changeDifficulty, toggleMusic, selectSinglePlayer,
-                      selectMultiplayer,m_clickSound,m_hoverSound);
+                      selectMultiplayer, restartGame, m_clickSound, m_hoverSound);
     
     return true;
 }
@@ -253,6 +274,21 @@ void Game::handleEvents() {
                 m_ball.launch();
                 m_ballAttachedToPlayer1 = false;
                 m_ballAttachedToPlayer2 = false;
+            }
+        }
+
+        if (e_gamestate == GameState::MATCHEND) {
+            if (event.type == SDL_KEYDOWN && event.key.keysym.sym == SDLK_RETURN) {
+                e_gamestate = GameState::MENU;
+                m_gui.setGameState(static_cast<int>(e_gamestate));
+                resetGameState();
+                m_gameScoreP1 = 0;
+                m_gameScoreP2 = 0;
+                m_matchEnded = false;
+
+                std::cout <<"Matched condition in handle event"<<std::endl;
+                std::cout<<"matchEnd:"<<m_matchEnded<<"\nP1:";
+                std::cout<<m_gameScoreP1<<"\nP2:"<<m_gameScoreP2<<"\n";
             }
         }
 
@@ -308,9 +344,7 @@ void Game::update() {
     int score = 0;
     
     switch (e_gamestate) {
-        case GameState::MENU:
-            // Update menu
-            break;
+        case GameState::MENU: break; // Update menu
         case GameState::RUNNING:
             if (e_gamemode == GameMode::SINGLE_PLAYER) {
                 m_AI.update(m_ball, m_player2, m_dT, m_gameAreaWidth, UI_AREA_WIDTH);
@@ -330,6 +364,7 @@ void Game::update() {
             }
 
             if (score > 0) {
+                
                 m_player1.m_score++;
                 m_ball.attachTo(&m_player2.p_getRect(), m_player2.m_id);
                 m_ballAttachedToPlayer2 = true;
@@ -339,29 +374,34 @@ void Game::update() {
                 m_ballAttachedToPlayer1 = true;
             }
 
+            if(m_player1.m_score == 11){
+                m_gameScoreP1++;
+                m_player1.m_score = 0;
+                m_player2.m_score = 0;
+                m_gamesPlayed++;
+            }else if(m_player2.m_score == 11){
+                m_gameScoreP2++;
+                m_player2.m_score = 0;
+                m_player1.m_score = 0;
+                m_gamesPlayed++;
+            }
+
+            if (m_gameScoreP1 >= m_matchWins || m_gameScoreP2 >= m_matchWins) {
+                m_matchEnded = true;
+                m_matchWinner = (m_gameScoreP1 > m_gameScoreP2) ? 1 : 2;
+                e_gamestate = GameState::MATCHEND;
+                m_gui.setGameState(static_cast<int>(e_gamestate));
+            }
+
             m_gui.updateScore(m_player1.m_score, m_player2.m_score);
-
             break;
-
-        case GameState::PAUSED:{
-            // Do nothing or update pause menu
-            break;
-            }
-        case GameState::SETTINGS:{
-            // Update settings menu
-            break;
-            }
-        case GameState::GAMESEL:{
-            // Update game selection menu
-            break;
-            }
-        case GameState::DIFFICULTYSEL:{
-            break;
-            }
-        case GameState::TOGGLEMUSIC:{
-            break;
+        case GameState::PAUSED: break;// Do nothing or update pause menu
+        case GameState::SETTINGS:break;// Update settings menu
+        case GameState::GAMESEL: break; // Update game selection menu
+        case GameState::DIFFICULTYSEL: break;
+        case GameState::TOGGLEMUSIC: break;
+        case GameState::MATCHEND: break;
         }
-    }
     m_gui.update();
 }
 
@@ -383,7 +423,11 @@ void Game::render() {
 
     SDL_Rect outline_audio = {330, 312, 20, 20};
 
+    SDL_Rect ScoreOutline = {15,150,350,300};
+
     m_gui.render(static_cast<int>(e_gamestate));
+
+    char str[32];
 
     switch (e_gamestate) {
         case GameState::MENU:{
@@ -417,11 +461,31 @@ void Game::render() {
             SDL_SetRenderDrawColor(m_renderer, 200,200,200,175);
             SDL_RenderFillRect(m_renderer, &centerLine);
 
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer, 200,200,200,255);
+
+            SDL_RenderDrawRect(m_renderer, &ScoreOutline);
+            //HACK HACK HACK HACK HACK HACK HACK HACK HACK
+
+            std::snprintf(str, sizeof(str),"Match: %d", m_gamesPlayed);
+            m_gui.drawText(true,str, (ScoreOutline.w - ScoreOutline.x) / 2, 220, m_font);
+
+            std::snprintf(str, sizeof(str),"Game Point");
+            m_gui.drawText(true,str, (ScoreOutline.w - ScoreOutline.x) / 2, 300, m_font);
+
+            std::snprintf(str, sizeof(str),"%d :P2", m_gameScoreP2);
+            m_gui.drawText(false,str, (ScoreOutline.w - ScoreOutline.x) - 120, 350, m_font);
+
+            std::snprintf(str, sizeof(str),"P1: %d", m_gameScoreP1);
+            m_gui.drawText(false,str, (ScoreOutline.x) + 70 ,350, m_font);
+
             m_player1.render(m_renderer);
             m_player2.render(m_renderer);
             m_ball.render(m_renderer);
+
             break;
-    }
+            
+        }//FIXME:Find a way to refactor this case
         case GameState::PAUSED:{
             // Render paused game and pause menu
             SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
@@ -443,6 +507,32 @@ void Game::render() {
             SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
             SDL_SetRenderDrawColor(m_renderer, 125, 125, 125, 50);
             SDL_RenderFillRect(m_renderer, &pauseArea);
+
+            SDL_SetRenderDrawBlendMode(m_renderer, SDL_BLENDMODE_BLEND);
+            SDL_SetRenderDrawColor(m_renderer, 200,200,200,255);
+            SDL_RenderDrawRect(m_renderer, &ScoreOutline);
+
+            std::snprintf(str, sizeof(str),"Match: %d", m_gamesPlayed);
+            m_gui.drawText(true,str, (ScoreOutline.w - ScoreOutline.x) / 2, 175, m_font);
+
+            std::snprintf(str, sizeof(str),"Game Point");
+            m_gui.drawText(true,str, (ScoreOutline.w - ScoreOutline.x) / 2, 240, m_font);
+
+            std::snprintf(str, sizeof(str),"%d :P2", m_gameScoreP2);
+            m_gui.drawText(false,str, (ScoreOutline.w - ScoreOutline.x) - 120, 290, m_font);
+
+            std::snprintf(str, sizeof(str),"P1: %d", m_gameScoreP1);
+            m_gui.drawText(false,str, (ScoreOutline.x) + 70 ,290, m_font);
+
+            std::snprintf(str, sizeof(str),"Score");
+            m_gui.drawText(true,str, (ScoreOutline.w - ScoreOutline.x) / 2, 340, m_font);
+
+            std::snprintf(str, sizeof(str),"%d :P2", m_player2.m_score);
+            m_gui.drawText(false,str, (ScoreOutline.w - ScoreOutline.x) - 120, 390, m_font);
+
+            std::snprintf(str, sizeof(str),"P1: %d", m_player1.m_score);
+            m_gui.drawText(false,str, (ScoreOutline.x) + 70 ,390, m_font);
+
             break;
         }
         case GameState::SETTINGS:{
@@ -480,15 +570,9 @@ void Game::render() {
             SDL_SetRenderDrawColor(m_renderer, 200, 200, 200, 255);
             std::string difficultyText;
             switch (m_currentDifficulty) {
-                case Difficulty::EASY:
-                    difficultyText = "EASY";
-                    break;
-                case Difficulty::NORMAL:
-                    difficultyText = "NORMAL";
-                    break;
-                case Difficulty::HARD:
-                    difficultyText = "HARD";
-                    break;
+                case Difficulty::EASY: difficultyText = "EASY"; break;
+                case Difficulty::NORMAL: difficultyText = "NORMAL"; break;
+                case Difficulty::HARD: difficultyText = "HARD"; break;
             }
             m_gui.drawText(true, difficultyText, centerX, centerY - 30, m_font);
 
@@ -503,11 +587,25 @@ void Game::render() {
             std::cout << "Finished rendering difficulty selection screen" << std::endl;
             break;
         }
-        case GameState::TOGGLEMUSIC:{
+        case GameState::TOGGLEMUSIC:{break;}
+        case GameState::MATCHEND: {
+            SDL_SetRenderDrawColor(m_renderer, 0, 0, 0, 255);
+            SDL_RenderClear(m_renderer);
+
+            int centerX = (m_windowWidth / 2) - 300;
+            int centerY = m_windowHeight / 2;
+
+            char winnerText[32];
+            std::snprintf(winnerText,sizeof(winnerText),"Player %d Wins!", m_matchWinner);
+            m_gui.drawText(false, winnerText, centerX+30, centerY - 100, m_gui.getSubTitleFont());
+
+            std::string scoreText = "Final Score: " + std::to_string(m_gameScoreP1) + " - " + std::to_string(m_gameScoreP2);
+            m_gui.drawText(false, scoreText, centerX+100, centerY, m_font);
+
+            m_gui.drawText(false, "Press ENTER to return to main menu", centerX - 135 , centerY + 100, m_font);
             break;
         }
     } 
-    
     SDL_RenderPresent(m_renderer);
 }
 
@@ -515,6 +613,7 @@ void Game::setAIDifficulty(Difficulty difficulty) {
     m_AI.setDifficulty(difficulty);
 }
 
+//HACK: This section -v-
 void Game::exitCallback() { if (g_game) g_game->m_running = false;}
 void Game::startGameCallback() { if (g_game) g_game->startGame();}
 void Game::pauseGameCallback() { if (g_game) g_game->pauseGame();}
@@ -526,11 +625,11 @@ void Game::changeDifficulty(){if(g_game) g_game->setDifficulty();}
 void Game::returnToMenu(){if(g_game) g_game->backToMenu();}
 void Game::selectSinglePlayer(){if (g_game) g_game->toggleSinglePlayer();}
 void Game::selectMultiplayer(){if(g_game) g_game->toggleMultiPlayer();}
+void Game::restartGame(){if(g_game) g_game->gameRestart();}
 
 void Game::resetGameState() {
     // Reset player 1 position
     m_player1.setPosition(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, m_windowHeight - 100
-    
     );
     // Reset player 2 position
     m_player2.setPosition(UI_AREA_WIDTH + (m_gameAreaWidth - RECT_WIDTH) / 2, 50);
@@ -579,4 +678,16 @@ void Game::selectDifficulty(int direction) {
         case Difficulty::NORMAL: std::cout << "Normal"; break;
     }
     std::cout << "\n";
+}
+
+void renderOutlinedRect(SDL_Renderer* renderer, const SDL_Rect& rect, SDL_BlendMode blendMode, SDL_Color color) {
+    SDL_SetRenderDrawBlendMode(renderer, blendMode);
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    SDL_RenderDrawRect(renderer, &rect);
+}
+
+void renderFilledRect(SDL_Renderer* renderer, const SDL_Rect& rect, SDL_BlendMode blendMode, SDL_Color color) {
+    SDL_SetRenderDrawBlendMode(renderer, blendMode);
+    SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
+    SDL_RenderFillRect(renderer, &rect);
 }

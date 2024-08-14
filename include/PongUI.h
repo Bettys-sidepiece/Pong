@@ -45,6 +45,7 @@ enum class GuiState {
     GAMESEL,
     DIFFICULTYSEL,
     TOGGLEMUSIC,
+    MATCHEND,
 };
 
 class UI {
@@ -55,13 +56,14 @@ public:
     void setSettingsCallback(CallbackFunction callback) { m_settingsCallback = callback; }
     void setPlayModeCallback(CallbackFunction callback) { m_playModeCallback = callback; }
     void setResumeCallback(CallbackFunction callback) { m_resumeCallback = callback; }
+    void setResetCallback(CallbackFunction callback) { m_resetCallback = callback; }
     
     void initButtons(CallbackFunction exitCallback, CallbackFunction startCallback, 
                     CallbackFunction pauseCallback, CallbackFunction resumeCallback,
                     CallbackFunction settingsCallback, CallbackFunction playModeCallback, 
                     CallbackFunction returnToMenuCallback, CallbackFunction changeDifficultyCallback, 
                     CallbackFunction toggleMusicCallback, CallbackFunction selectSinglePlayerCallback, 
-                    CallbackFunction selectMultiplayerCallback,
+                    CallbackFunction selectMultiplayerCallback,CallbackFunction resetCallback,
                     Mix_Chunk* clickSound,Mix_Chunk* hoverSound);
 
     UI(SDL_Renderer* renderer, int uiAreaWidth, int windowHeight, TTF_Font* font);
@@ -88,6 +90,7 @@ public:
 
 
 private:
+    CallbackFunction m_resetCallback;
     CallbackFunction m_exitCallback;
     CallbackFunction m_startGameCallback;
     CallbackFunction m_pauseCallback;

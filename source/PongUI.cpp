@@ -89,7 +89,7 @@ UI::~UI() {
 
 // Render the UI based on the state
 void UI::render(int state) {
-    if (state < 0 || state > static_cast<int>(GuiState::TOGGLEMUSIC)) {
+    if (state < 0 || state > static_cast<int>(GuiState::MATCHEND)) {
         std::cerr << "Invalid state in UI::render: " << state << std::endl;
         return;
     }
@@ -108,8 +108,8 @@ void UI::render(int state) {
             }
             break;
         case static_cast<int>(GuiState::GAME_PAUSED):
-            drawText(false, std::to_string(m_player1Score), 450, (m_screenheight/2)+90, m_subtitlefont);
-            drawText(false, std::to_string(m_player2Score), 450, (m_screenheight/2)-150, m_subtitlefont);
+            //drawText(false, std::to_string(m_player1Score), 450, (m_screenheight/2)+90, m_subtitlefont);
+            //drawText(false, std::to_string(m_player2Score), 450, (m_screenheight/2)-150, m_subtitlefont);
             drawText(true,"Paused", 25, 80, m_subtitlefont);
             for (const TextButton& button : m_buttons[state]) {
                 button.render(m_renderer);
@@ -125,6 +125,12 @@ void UI::render(int state) {
         case static_cast<int>(GuiState::GAMESEL):
             drawText(true,"Game Mode", 25, 80, m_subtitlefont);
             for (const TextButton& button : m_buttons[state]) {
+                button.render(m_renderer);
+            }
+            break;
+        case static_cast<int>(GuiState::MATCHEND):
+            drawText(true,"Game Over", 25, 80, m_subtitlefont);
+            for (const TextButton& button : m_buttons[static_cast<int>(GuiState::GAME_PAUSED)]) {
                 button.render(m_renderer);
             }
             break;
@@ -196,15 +202,17 @@ void UI::update() {
     // Placeholder for future updates
 }
 
+//HACK: Ugly hack to get button callback to work
 // Initialize buttons with their respective callbacks
 void UI::initButtons(CallbackFunction exitCallback, CallbackFunction startCallback, 
                     CallbackFunction pauseCallback, CallbackFunction resumeCallback,
                      CallbackFunction settingsCallback, CallbackFunction playModeCallback, 
                      CallbackFunction returnToMenuCallback, CallbackFunction changeDifficultyCallback, 
                      CallbackFunction toggleMusicCallback, CallbackFunction selectSinglePlayerCallback, 
-                     CallbackFunction selectMultiplayerCallback,
+                     CallbackFunction selectMultiplayerCallback,CallbackFunction resetCallback,
                      Mix_Chunk* clickSound,Mix_Chunk* hoverSound){
     // Set callbacks for buttons
+    m_resetCallback = resetCallback;
     m_exitCallback = exitCallback;
     m_startGameCallback = startCallback;
     m_pauseCallback = pauseCallback;
@@ -238,11 +246,12 @@ void UI::initButtons(CallbackFunction exitCallback, CallbackFunction startCallba
     m_buttons[1].emplace_back(50, 420, "Back", m_font, defaultColor, hoverColor, m_returnToMenuCallback, clickSound, hoverSound);
 
     // Gameplay Paused
-    m_buttons[2].emplace_back(50, 360, "Resume", m_font, defaultColor, hoverColor, m_resumeCallback, clickSound, hoverSound);
-    m_buttons[2].emplace_back(50, 420, "Quit to Menu", m_font, defaultColor, hoverColor, m_returnToMenuCallback, clickSound, hoverSound);
+    m_buttons[2].emplace_back(50, 480, "Resume", m_font, defaultColor, hoverColor, m_resumeCallback, clickSound, hoverSound);
+    m_buttons[2].emplace_back(50, 540, "Restart Game", m_font, defaultColor, hoverColor, m_resetCallback, clickSound, hoverSound);
+    m_buttons[2].emplace_back(50, 600, "Quit to Menu", m_font, defaultColor, hoverColor, m_returnToMenuCallback, clickSound, hoverSound);
 
     // Gameplay Active
-    m_buttons[3].emplace_back(50, 300, "Pause", m_font, defaultColor, hoverColor, m_pauseCallback, clickSound, hoverSound);
+    m_buttons[3].emplace_back(50, 480, "Pause Game", m_font, defaultColor, hoverColor, m_pauseCallback, clickSound, hoverSound);
 
     // Game Mode Selection Buttons
     m_buttons[4].emplace_back(50, 300, "Single Player", m_font, defaultColor, hoverColor, m_selectSinglePlayerCallback, clickSound, hoverSound);

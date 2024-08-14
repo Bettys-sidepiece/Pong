@@ -12,14 +12,14 @@ void ComputerAI::setDifficulty(Difficulty difficulty) {
     m_difficulty = difficulty;
     switch (m_difficulty) {
         case Difficulty::EASY:
-            m_reactionTime = 0.25f;
-            m_predictionAccuracy = 0.75f;
-            m_maxSpeed = 75.0f;
+            m_reactionTime = 0.1f;
+            m_predictionAccuracy = 0.925f;
+            m_maxSpeed = 80.0f;
             break;
         case Difficulty::NORMAL:
-            m_reactionTime = 0.1f;
-            m_predictionAccuracy = 0.9f;
-            m_maxSpeed = 80.0f;
+            m_reactionTime = 0.075f;
+            m_predictionAccuracy = 0.95f;
+            m_maxSpeed = 85.0f;
             break;
         case Difficulty::HARD:
             m_reactionTime = 0.025f;
